@@ -1,0 +1,2216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#050b1a" />
+  <title>HALO GUARD — Luminous Radial Core Defense</title>
+  <style>
+    :root {
+      --bg-outer: #02050c;
+      --bg-center: #0b1936;
+      --bg-mid: #050b1a;
+      --bg-edge: #030610;
+      --bg-panel: rgba(10, 20, 44, 0.93);
+      --bg-elevated: rgba(18, 36, 76, 0.88);
+      --border-subtle: rgba(125, 211, 252, 0.22);
+      --border-strong: rgba(125, 211, 252, 0.48);
+
+      --text-main: #f0f9ff;
+      --text-muted: #94a3b8;
+      --accent-primary: #38bdf8;
+      --accent-secondary: #2563eb;
+      --accent-glow: rgba(56, 189, 248, 0.48);
+      --btn-text: #ffffff;
+
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      background-color: var(--bg-outer);
+      color: var(--text-main);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      overflow: hidden;
+      overscroll-behavior: none;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    #game-shell {
+      position: relative;
+      width: 100%;
+      max-width: 480px;
+      height: 100dvh;
+      margin: 0 auto;
+      background: radial-gradient(circle at 50% 50%, var(--bg-center) 0%, var(--bg-mid) 68%, var(--bg-edge) 100%);
+      overflow: hidden;
+      box-shadow: 0 0 75px rgba(0, 0, 0, 0.9);
+      transition: background 0.35s ease;
+    }
+
+    #game-canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      touch-action: none;
+      cursor: grab;
+    }
+
+    #game-canvas:active {
+      cursor: grabbing;
+    }
+
+    .hud-top {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      padding: calc(12px + var(--safe-top)) 14px 8px;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      pointer-events: none;
+      z-index: 20;
+    }
+
+    .hud-cluster {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      pointer-events: auto;
+    }
+
+    .hud-center {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      pointer-events: none;
+    }
+
+    .pill-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 6px 11px;
+      border-radius: 999px;
+      background: var(--bg-panel);
+      border: 1px solid var(--border-strong);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      font-size: 12px;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.38);
+    }
+
+    .shard-chip {
+      color: var(--accent-primary);
+    }
+
+    .wave-chip {
+      color: var(--text-main);
+      letter-spacing: 0.04em;
+    }
+
+    .score-num {
+      font-size: 34px;
+      font-weight: 900;
+      line-height: 1;
+      letter-spacing: -0.02em;
+      font-variant-numeric: tabular-nums;
+      color: #ffffff;
+      text-shadow: 0 4px 18px var(--accent-glow);
+      transition: transform 0.12s ease;
+    }
+
+    .score-num.bump {
+      transform: scale(1.18);
+    }
+
+    .combo-pill {
+      margin-top: 4px;
+      padding: 2px 10px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 900;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-strong);
+      color: var(--accent-primary);
+      opacity: 0;
+      transform: translateY(-4px) scale(0.9);
+      transition: opacity 0.18s ease, transform 0.18s ease;
+    }
+
+    .combo-pill.visible {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+
+    .icon-btn {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      border: 1px solid var(--border-strong);
+      background: var(--bg-panel);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      color: var(--text-main);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 15px;
+      cursor: pointer;
+      transition: transform 0.12s ease, opacity 0.2s ease;
+    }
+
+    .icon-btn:active {
+      transform: scale(0.9);
+    }
+
+    .icon-btn.muted {
+      opacity: 0.45;
+    }
+
+    .hud-bottom {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      padding: 10px 18px calc(16px + var(--safe-bottom));
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      pointer-events: none;
+      z-index: 20;
+    }
+
+    .core-pips-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 6px 14px;
+      border-radius: 999px;
+      background: var(--bg-panel);
+      border: 1px solid var(--border-strong);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+    }
+
+    .core-pips-lbl {
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+
+    .pip {
+      width: 14px;
+      height: 14px;
+      border-radius: 4px;
+      transform: rotate(45deg);
+      background: var(--accent-primary);
+      box-shadow: 0 0 12px var(--accent-glow);
+      transition: all 0.25s ease;
+    }
+
+    .pip.lost {
+      background: rgba(148, 163, 184, 0.18);
+      box-shadow: none;
+      border: 1px solid rgba(148, 163, 184, 0.3);
+    }
+
+    .nova-meter-btn {
+      pointer-events: auto;
+      width: 100%;
+      max-width: 280px;
+      padding: 8px 14px;
+      border-radius: 14px;
+      border: 1px solid var(--border-strong);
+      background: var(--bg-panel);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      cursor: pointer;
+      transition: transform 0.12s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .nova-meter-btn.ready {
+      border-color: #fde047;
+      box-shadow: 0 0 24px rgba(250, 204, 21, 0.5);
+      animation: novaPulseGlow 1.1s ease-in-out infinite;
+    }
+
+    .nova-meter-btn.ready:active {
+      transform: scale(0.95);
+    }
+
+    @keyframes novaPulseGlow {
+      0%, 100% { box-shadow: 0 0 16px rgba(250, 204, 21, 0.4); }
+      50% { box-shadow: 0 0 28px var(--accent-glow); }
+    }
+
+    .nova-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 11px;
+      font-weight: 900;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-main);
+    }
+
+    .nova-meter-btn.ready .nova-header {
+      color: #fef08a;
+    }
+
+    .nova-track {
+      width: 100%;
+      height: 7px;
+      border-radius: 999px;
+      background: rgba(5, 10, 22, 0.9);
+      overflow: hidden;
+    }
+
+    #nova-fill {
+      width: 0%;
+      height: 100%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary));
+      transition: width 0.12s ease-out;
+    }
+
+    .nova-meter-btn.ready #nova-fill {
+      background: linear-gradient(90deg, #fde047, var(--accent-primary), #e879f9);
+    }
+
+    .control-hint {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-muted);
+      letter-spacing: 0.04em;
+      opacity: 0.85;
+    }
+
+    .overlay {
+      position: absolute;
+      inset: 0;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      z-index: 40;
+    }
+
+    .overlay.open {
+      display: flex;
+    }
+
+    #overlay-title {
+      background: radial-gradient(circle at 50% 50%, rgba(4, 8, 18, 0.3), rgba(3, 6, 15, 0.82));
+      justify-content: space-between;
+      padding: calc(74px + var(--safe-top)) 22px calc(32px + var(--safe-bottom));
+    }
+
+    .overlay-backdrop {
+      background: rgba(3, 6, 15, 0.82);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+    }
+
+    .title-hero {
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .kicker-badge {
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--accent-primary);
+      padding: 5px 12px;
+      border-radius: 999px;
+      background: var(--bg-panel);
+      border: 1px solid var(--border-strong);
+    }
+
+    .game-title {
+      margin: 0;
+      font-size: clamp(38px, 11vw, 50px);
+      font-weight: 900;
+      letter-spacing: 0.06em;
+      line-height: 1.04;
+      background: linear-gradient(135deg, #ffffff 10%, var(--accent-primary) 55%, var(--accent-secondary) 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      filter: drop-shadow(0 6px 24px var(--accent-glow));
+    }
+
+    .game-sub {
+      margin: 0;
+      font-size: 13px;
+      color: var(--text-muted);
+      max-width: 290px;
+      line-height: 1.45;
+    }
+
+    .records-row {
+      display: flex;
+      gap: 10px;
+      margin-top: 4px;
+    }
+
+    .record-pill {
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: var(--bg-panel);
+      border: 1px solid var(--border-strong);
+      font-size: 12px;
+      font-weight: 800;
+      color: var(--text-main);
+    }
+
+    .title-actions {
+      width: 100%;
+      max-width: 310px;
+      display: flex;
+      flex-direction: column;
+      gap: 11px;
+    }
+
+    .modal-card {
+      width: 100%;
+      max-width: 380px;
+      background: var(--bg-panel);
+      border: 1.5px solid var(--border-strong);
+      border-radius: 24px;
+      padding: 22px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 13px;
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.78), 0 0 28px var(--accent-glow);
+      max-height: 89dvh;
+      overflow-y: auto;
+    }
+
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .modal-title {
+      margin: 0;
+      font-size: 21px;
+      font-weight: 900;
+      letter-spacing: 0.04em;
+    }
+
+    .btn {
+      width: 100%;
+      padding: 13px 16px;
+      border-radius: 15px;
+      border: none;
+      font-size: 14px;
+      font-weight: 900;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      cursor: pointer;
+      transition: transform 0.12s ease, opacity 0.2s ease;
+    }
+
+    .btn:active {
+      transform: scale(0.96);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%);
+      color: var(--btn-text);
+      box-shadow: 0 10px 26px var(--accent-glow);
+    }
+
+    .btn-emerald {
+      background: linear-gradient(135deg, #34d399 0%, #059669 100%);
+      color: #03150e;
+      box-shadow: 0 8px 22px rgba(16, 185, 129, 0.35);
+    }
+
+    .btn-gold {
+      background: linear-gradient(135deg, #fbbf24 0%, #d97706 100%);
+      color: #090d16;
+      box-shadow: 0 8px 22px rgba(245, 158, 11, 0.35);
+    }
+
+    .btn-secondary {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-strong);
+      color: var(--text-main);
+    }
+
+    .btn-row-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .skins-list {
+      display: flex;
+      flex-direction: column;
+      gap: 9px;
+    }
+
+    .skin-card {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px 13px;
+      border-radius: 16px;
+      background: rgba(0, 0, 0, 0.35);
+      border: 1.5px solid var(--border-subtle);
+      cursor: pointer;
+      transition: border-color 0.2s ease, transform 0.12s ease;
+    }
+
+    .skin-card:active {
+      transform: scale(0.98);
+    }
+
+    .skin-card.equipped {
+      border-color: var(--accent-primary);
+      background: var(--bg-elevated);
+      box-shadow: 0 0 16px var(--accent-glow);
+    }
+
+    .skin-swatch {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      border: 2px solid rgba(255, 255, 255, 0.4);
+    }
+
+    .skin-badge {
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 900;
+      white-space: nowrap;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-strong);
+      color: var(--text-main);
+    }
+
+    .skin-badge.equipped {
+      background: var(--accent-primary);
+      color: var(--btn-text);
+      border-color: transparent;
+    }
+
+    .skin-badge.buy {
+      background: rgba(56, 189, 248, 0.16);
+      color: #7dd3fc;
+      border-color: rgba(56, 189, 248, 0.45);
+    }
+
+    .skin-badge.ad {
+      background: linear-gradient(135deg, rgba(232, 121, 249, 0.26), rgba(56, 189, 248, 0.26));
+      color: #f5d0fe;
+      border-color: rgba(232, 121, 249, 0.5);
+    }
+
+    .go-stats-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+
+    .go-stat {
+      background: rgba(0, 0, 0, 0.35);
+      border: 1px solid var(--border-subtle);
+      border-radius: 14px;
+      padding: 10px 6px;
+      text-align: center;
+    }
+
+    .go-stat-val {
+      display: block;
+      font-size: 18px;
+      font-weight: 900;
+      font-variant-numeric: tabular-nums;
+      color: var(--accent-primary);
+    }
+
+    .go-stat-lbl {
+      display: block;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .new-best-pill {
+      display: none;
+      padding: 4px 12px;
+      border-radius: 999px;
+      background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+      color: var(--btn-text);
+      font-size: 11px;
+      font-weight: 900;
+      letter-spacing: 0.1em;
+    }
+
+    .new-best-pill.show {
+      display: inline-block;
+    }
+
+    .ad-track {
+      width: 100%;
+      height: 10px;
+      border-radius: 999px;
+      background: rgba(4, 9, 20, 0.92);
+      border: 1px solid var(--border-subtle);
+      overflow: hidden;
+    }
+
+    #ad-progress-bar {
+      width: 0%;
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary));
+      transition: width 0.05s linear;
+    }
+
+    #toast {
+      position: absolute;
+      bottom: calc(108px + var(--safe-bottom));
+      left: 50%;
+      transform: translate(-50%, 14px);
+      background: var(--bg-panel);
+      border: 1.5px solid var(--accent-primary);
+      color: var(--text-main);
+      padding: 9px 15px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 800;
+      box-shadow: 0 10px 26px rgba(0, 0, 0, 0.65);
+      opacity: 0;
+      pointer-events: none;
+      z-index: 95;
+      transition: opacity 0.2s ease, transform 0.2s ease;
+      max-width: 88%;
+      text-align: center;
+    }
+
+    #toast.show {
+      opacity: 1;
+      transform: translate(-50%, 0);
+    }
+  </style>
+</head>
+<body>
+  <div id="game-shell">
+    <canvas id="game-canvas" aria-label="Halo Guard Arena"></canvas>
+
+    <!-- Top Floating HUD -->
+    <header class="hud-top">
+      <div class="hud-cluster">
+        <div class="pill-chip shard-chip" title="Halo Shards">
+          <span>✦</span>
+          <span id="hud-shards">0</span>
+        </div>
+        <div id="hud-wave-pill" class="pill-chip wave-chip" style="display:none;">
+          <span>WAVE</span>
+          <span id="hud-wave">1</span>
+        </div>
+      </div>
+
+      <div id="hud-score-center" class="hud-center" style="opacity:0;transition:opacity 0.2s ease;">
+        <div id="hud-score" class="score-num">0</div>
+        <div id="hud-combo" class="combo-pill">COMBO x2</div>
+      </div>
+
+      <div class="hud-cluster">
+        <button id="btn-sound" class="icon-btn" type="button" title="Toggle Sound" aria-label="Toggle Sound">🔊</button>
+        <button id="btn-haptics" class="icon-btn" type="button" title="Toggle Haptics" aria-label="Toggle Haptics">📳</button>
+        <button id="btn-pause" class="icon-btn" type="button" title="Pause Game" aria-label="Pause Game" style="display:none;">⏸</button>
+      </div>
+    </header>
+
+    <!-- Bottom HUD -->
+    <footer id="hud-bottom" class="hud-bottom" style="opacity:0;transition:opacity 0.25s ease;">
+      <div class="core-pips-row">
+        <span class="core-pips-lbl">Halo Core</span>
+        <span id="pip-1" class="pip"></span>
+        <span id="pip-2" class="pip"></span>
+        <span id="pip-3" class="pip"></span>
+      </div>
+
+      <button id="btn-nova-meter" class="nova-meter-btn" type="button" aria-label="Trigger Halo Nova">
+        <div class="nova-header">
+          <span id="nova-label">⚡ Halo Nova</span>
+          <span id="nova-pct">0%</span>
+        </div>
+        <div class="nova-track">
+          <div id="nova-fill"></div>
+        </div>
+      </button>
+
+      <div id="control-hint" class="control-hint">Drag anywhere to rotate halo • Tap to unleash Nova</div>
+    </footer>
+
+    <!-- Start / Title Overlay -->
+    <section id="overlay-title" class="overlay open" aria-label="Title Screen">
+      <div class="title-hero">
+        <span class="kicker-badge">Luminous Radial Defense</span>
+        <h1 class="game-title">HALO GUARD</h1>
+        <p class="game-sub">Rotate your radiant halo-shield to deflect incoming hazards, nail Perfect Parries, and unleash Halo Novas.</p>
+        <div class="records-row">
+          <div class="record-pill">🏆 Best: <strong id="title-best-score">0</strong></div>
+          <div class="record-pill">🌊 Wave: <strong id="title-best-wave">1</strong></div>
+        </div>
+      </div>
+
+      <div class="title-actions">
+        <button id="btn-start" class="btn btn-primary" type="button">▶ DEFEND HALO</button>
+        <button id="btn-title-hangar" class="btn btn-secondary" type="button">🛡 HALO THEMES</button>
+      </div>
+    </section>
+
+    <!-- Pause Modal -->
+    <section id="overlay-pause" class="overlay overlay-backdrop" role="dialog" aria-modal="true" aria-labelledby="pause-title">
+      <div class="modal-card" style="text-align:center;">
+        <h2 id="pause-title" class="modal-title">SYSTEM PAUSED</h2>
+        <p style="margin:-6px 0 0;font-size:13px;color:var(--text-muted);">Halo Core defenses standing by.</p>
+        <button id="btn-resume" class="btn btn-primary" type="button">▶ RESUME</button>
+        <button id="btn-restart-pause" class="btn btn-secondary" type="button">↻ RESTART RUN</button>
+        <button id="btn-quit-pause" class="btn btn-secondary" type="button">🏠 MAIN MENU</button>
+      </div>
+    </section>
+
+    <!-- Game Over Modal -->
+    <section id="overlay-gameover" class="overlay overlay-backdrop" role="dialog" aria-modal="true" aria-labelledby="go-title">
+      <div class="modal-card">
+        <div style="text-align:center;display:flex;flex-direction:column;align-items:center;gap:6px;">
+          <span id="go-new-best" class="new-best-pill">★ NEW HIGH SCORE ★</span>
+          <h2 id="go-title" class="modal-title" style="color:#fb7185;">HALO BREACHED</h2>
+          <div id="go-score" style="font-size:48px;font-weight:900;line-height:1;font-variant-numeric:tabular-nums;">0</div>
+        </div>
+
+        <div class="go-stats-grid">
+          <div class="go-stat">
+            <span id="go-best" class="go-stat-val">0</span>
+            <span class="go-stat-lbl">Best</span>
+          </div>
+          <div class="go-stat">
+            <span id="go-wave" class="go-stat-val">1</span>
+            <span class="go-stat-lbl">Wave</span>
+          </div>
+          <div class="go-stat">
+            <span id="go-shards" class="go-stat-val">+0</span>
+            <span class="go-stat-lbl">Shards ✦</span>
+          </div>
+        </div>
+
+        <button id="btn-revive" class="btn btn-emerald" type="button">🎬 HALO REPAIR &amp; REVIVE (1X)</button>
+        <button id="btn-double-shards" class="btn btn-gold" type="button">🎬 2X SHARDS (+0 ✦)</button>
+
+        <div class="btn-row-2">
+          <button id="btn-play-again" class="btn btn-primary" type="button">↻ PLAY AGAIN</button>
+          <button id="btn-go-hangar" class="btn btn-secondary" type="button">🛡 THEMES</button>
+        </div>
+
+        <button id="btn-go-home" class="btn btn-secondary" type="button">🏠 HOME</button>
+      </div>
+    </section>
+
+    <!-- Halo Themes Armory Modal -->
+    <section id="overlay-hangar" class="overlay overlay-backdrop" role="dialog" aria-modal="true" aria-labelledby="hangar-title">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h2 id="hangar-title" class="modal-title">🛡 HALO THEMES</h2>
+          <div class="pill-chip shard-chip">
+            <span>✦</span>
+            <span id="hangar-shards">0</span>
+          </div>
+        </div>
+
+        <div id="skins-list" class="skins-list"></div>
+
+        <button id="btn-ad-shards" class="btn btn-gold" type="button">🎬 +60 SHARDS (WATCH AD)</button>
+        <button id="btn-close-hangar" class="btn btn-secondary" type="button">BACK</button>
+      </div>
+    </section>
+
+    <!-- Simulated Rewarded Ad Modal -->
+    <section id="overlay-ad" class="overlay overlay-backdrop" role="dialog" aria-modal="true" aria-labelledby="ad-title">
+      <div class="modal-card" style="text-align:center;">
+        <h2 id="ad-title" class="modal-title" style="color:var(--accent-primary);">🎬 REWARDED AD</h2>
+        <p id="ad-reward-text" style="margin:-4px 0 0;font-size:14px;font-weight:700;color:var(--text-main);">Preparing reward...</p>
+        <div class="ad-track">
+          <div id="ad-progress-bar"></div>
+        </div>
+        <div id="ad-countdown" style="font-size:12px;font-weight:800;color:var(--text-muted);">Reward in 2.0s</div>
+      </div>
+    </section>
+
+    <div id="toast" aria-live="polite"></div>
+  </div>
+
+  <script>
+    (function () {
+      'use strict';
+
+      /* 1. SAFE STORAGE */
+      const SafeStorage = {
+        mem: {},
+        getItem(key) {
+          try { return window.localStorage.getItem(key); }
+          catch (_) { return Object.prototype.hasOwnProperty.call(this.mem, key) ? this.mem[key] : null; }
+        },
+        setItem(key, value) {
+          const str = String(value);
+          this.mem[key] = str;
+          try { window.localStorage.setItem(key, str); } catch (_) {}
+        },
+        getJSON(key, fallback) {
+          try {
+            const raw = this.getItem(key);
+            return raw ? JSON.parse(raw) : fallback;
+          } catch (_) { return fallback; }
+        },
+        setJSON(key, obj) {
+          try { this.setItem(key, JSON.stringify(obj)); } catch (_) {}
+        }
+      };
+
+      /* 2. FULL UI + CANVAS HALO THEMES */
+      const HALO_THEMES = [
+        {
+          id: 'celestial_cyan',
+          name: 'Celestial Cyan',
+          desc: 'Luminous sky cyan & cobalt halo',
+          cost: 0,
+          adUnlock: false,
+          primary: '#38bdf8',
+          secondary: '#2563eb',
+          core: '#7dd3fc',
+          glow: 'rgba(56, 189, 248, 0.55)',
+          btnText: '#ffffff',
+          swatch: 'linear-gradient(135deg, #38bdf8, #1d4ed8)',
+          prism: false,
+          ui: {
+            '--bg-outer': '#02050c',
+            '--bg-center': '#0b1936',
+            '--bg-mid': '#050b1a',
+            '--bg-edge': '#030610',
+            '--bg-panel': 'rgba(10, 20, 44, 0.93)',
+            '--bg-elevated': 'rgba(18, 36, 76, 0.88)',
+            '--border-subtle': 'rgba(125, 211, 252, 0.22)',
+            '--border-strong': 'rgba(125, 211, 252, 0.48)',
+            '--text-main': '#f0f9ff',
+            '--text-muted': '#94a3b8',
+            '--accent-primary': '#38bdf8',
+            '--accent-secondary': '#2563eb',
+            '--accent-glow': 'rgba(56, 189, 248, 0.48)',
+            '--btn-text': '#ffffff'
+          }
+        },
+        {
+          id: 'emerald_aurora',
+          name: 'Emerald Aurora',
+          desc: 'Bio-luminescent jade & mint barrier',
+          cost: 120,
+          adUnlock: false,
+          primary: '#34d399',
+          secondary: '#059669',
+          core: '#6ee7b7',
+          glow: 'rgba(52, 211, 153, 0.55)',
+          btnText: '#02140d',
+          swatch: 'linear-gradient(135deg, #34d399, #065f46)',
+          prism: false,
+          ui: {
+            '--bg-outer': '#020806',
+            '--bg-center': '#0b2c20',
+            '--bg-mid': '#04140e',
+            '--bg-edge': '#020a07',
+            '--bg-panel': 'rgba(7, 28, 21, 0.93)',
+            '--bg-elevated': 'rgba(14, 54, 40, 0.88)',
+            '--border-subtle': 'rgba(52, 211, 153, 0.24)',
+            '--border-strong': 'rgba(52, 211, 153, 0.52)',
+            '--text-main': '#ecfdf5',
+            '--text-muted': '#a7f3d0',
+            '--accent-primary': '#34d399',
+            '--accent-secondary': '#059669',
+            '--accent-glow': 'rgba(16, 185, 129, 0.48)',
+            '--btn-text': '#02140d'
+          }
+        },
+        {
+          id: 'solar_halo',
+          name: 'Solar Halo',
+          desc: 'Radiant gold & molten amber corona',
+          cost: 260,
+          adUnlock: false,
+          primary: '#fbbf24',
+          secondary: '#ea580c',
+          core: '#fde68a',
+          glow: 'rgba(251, 191, 36, 0.55)',
+          btnText: '#140800',
+          swatch: 'linear-gradient(135deg, #fde047, #ea580c)',
+          prism: false,
+          ui: {
+            '--bg-outer': '#06040a',
+            '--bg-center': '#2c1824',
+            '--bg-mid': '#140a16',
+            '--bg-edge': '#09050b',
+            '--bg-panel': 'rgba(26, 15, 34, 0.93)',
+            '--bg-elevated': 'rgba(48, 28, 56, 0.88)',
+            '--border-subtle': 'rgba(251, 191, 36, 0.24)',
+            '--border-strong': 'rgba(251, 191, 36, 0.52)',
+            '--text-main': '#fffbeb',
+            '--text-muted': '#fde68a',
+            '--accent-primary': '#fbbf24',
+            '--accent-secondary': '#ea580c',
+            '--accent-glow': 'rgba(251, 191, 36, 0.48)',
+            '--btn-text': '#140800'
+          }
+        },
+        {
+          id: 'prism_ring',
+          name: 'Prism Ring',
+          desc: 'Chromatic spectrum phase-shift halo',
+          cost: 450,
+          adUnlock: true,
+          primary: '#e879f9',
+          secondary: '#8b5cf6',
+          core: '#f5d0fe',
+          glow: 'rgba(232, 121, 249, 0.6)',
+          btnText: '#ffffff',
+          swatch: 'conic-gradient(from 0deg, #f43f5e, #fbbf24, #34d399, #38bdf8, #e879f9, #f43f5e)',
+          prism: true,
+          ui: {
+            '--bg-outer': '#06030c',
+            '--bg-center': '#241246',
+            '--bg-mid': '#100722',
+            '--bg-edge': '#070310',
+            '--bg-panel': 'rgba(22, 12, 44, 0.93)',
+            '--bg-elevated': 'rgba(42, 22, 82, 0.88)',
+            '--border-subtle': 'rgba(232, 121, 249, 0.26)',
+            '--border-strong': 'rgba(232, 121, 249, 0.56)',
+            '--text-main': '#fdf4ff',
+            '--text-muted': '#f5d0fe',
+            '--accent-primary': '#e879f9',
+            '--accent-secondary': '#8b5cf6',
+            '--accent-glow': 'rgba(217, 70, 239, 0.5)',
+            '--btn-text': '#ffffff'
+          }
+        }
+      ];
+
+      const profile = SafeStorage.getJSON('halo_guard_v1', {
+        highScore: 0,
+        bestWave: 1,
+        totalShards: 0,
+        selectedSkin: 'celestial_cyan',
+        unlockedSkins: ['celestial_cyan'],
+        soundEnabled: true,
+        hapticsEnabled: true
+      });
+
+      function saveProfile() {
+        SafeStorage.setJSON('halo_guard_v1', profile);
+      }
+
+      function getEquippedSkin() {
+        return HALO_THEMES.find((s) => s.id === profile.selectedSkin) || HALO_THEMES[0];
+      }
+
+      function applyTheme(skinId) {
+        const theme = HALO_THEMES.find((s) => s.id === skinId) || HALO_THEMES[0];
+        profile.selectedSkin = theme.id;
+        saveProfile();
+
+        const root = document.documentElement;
+        Object.keys(theme.ui).forEach((k) => root.style.setProperty(k, theme.ui[k]));
+
+        const metaTheme = document.querySelector('meta[name="theme-color"]');
+        if (metaTheme) metaTheme.setAttribute('content', theme.ui['--bg-mid']);
+      }
+
+      /* 3. WEB AUDIO SYNTHESIZER */
+      const SoundEngine = {
+        ctx: null,
+        init() {
+          if (!profile.soundEnabled) return;
+          try {
+            if (!this.ctx) {
+              const AudioCtx = window.AudioContext || window.webkitAudioContext;
+              if (AudioCtx) this.ctx = new AudioCtx();
+            }
+            if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume();
+          } catch (_) {}
+        },
+        tone(freq, dur, type, vol, delay, endFreq) {
+          if (!profile.soundEnabled) return;
+          try {
+            this.init();
+            if (!this.ctx) return;
+            const t0 = this.ctx.currentTime + (delay || 0);
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = type || 'sine';
+            osc.frequency.setValueAtTime(freq, t0);
+            if (endFreq) osc.frequency.exponentialRampToValueAtTime(Math.max(25, endFreq), t0 + dur);
+            gain.gain.setValueAtTime(0.0001, t0);
+            gain.gain.linearRampToValueAtTime(vol || 0.14, t0 + 0.01);
+            gain.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(t0);
+            osc.stop(t0 + dur + 0.025);
+          } catch (_) {}
+        },
+        playDeflect(combo, isParry) {
+          const scale = [392.0, 440.0, 523.25, 587.33, 659.25, 783.99, 880.0, 1046.5, 1174.66];
+          const idx = Math.min(scale.length - 1, Math.max(0, combo - 1));
+          const f = scale[idx];
+          this.tone(f, 0.15, 'triangle', 0.15, 0, f * 1.18);
+          if (isParry) {
+            this.tone(f * 1.5, 0.22, 'sine', 0.16, 0.03, f * 2.0);
+            this.tone(1567.98, 0.18, 'triangle', 0.11, 0.07);
+          }
+        },
+        playSplitterCrack() {
+          this.tone(310, 0.14, 'sawtooth', 0.13, 0, 140);
+          this.tone(520, 0.11, 'square', 0.09, 0.03, 740);
+        },
+        playNovaBoom() {
+          this.tone(160, 0.55, 'sawtooth', 0.22, 0, 38);
+          this.tone(440, 0.42, 'sine', 0.16, 0.02, 1180);
+          this.tone(880, 0.36, 'triangle', 0.13, 0.06, 1760);
+        },
+        playCoreDamage() {
+          this.tone(180, 0.28, 'sawtooth', 0.2, 0, 62);
+          this.tone(130, 0.34, 'square', 0.15, 0.08, 48);
+        },
+        playWaveClear() {
+          const notes = [523.25, 659.25, 783.99, 1046.5];
+          notes.forEach((n, i) => this.tone(n, 0.18, 'triangle', 0.12, i * 0.075));
+        },
+        playUI() { this.tone(600, 0.065, 'sine', 0.09, 0, 760); }
+      };
+
+      /* 4. HAPTICS */
+      const Haptics = {
+        vibrate(pattern) {
+          if (!profile.hapticsEnabled) return;
+          try { if (navigator && typeof navigator.vibrate === 'function') navigator.vibrate(pattern); } catch (_) {}
+        },
+        tap() { this.vibrate(10); },
+        deflect() { this.vibrate(14); },
+        parry() { this.vibrate([22, 28, 38]); },
+        nova() { this.vibrate([45, 30, 70]); },
+        damage() { this.vibrate([70, 40, 110]); }
+      };
+
+      /* 5. CAPACITOR ADMOB AD MANAGER (+ 2s Browser Simulator) */
+      const overlayAd = document.getElementById('overlay-ad');
+      const adRewardTextEl = document.getElementById('ad-reward-text');
+      const adProgressBarEl = document.getElementById('ad-progress-bar');
+      const adCountdownEl = document.getElementById('ad-countdown');
+
+      const AdManager = {
+        busy: false,
+        initialized: false,
+        rewardedId: 'ca-app-pub-3940256099942544/5224354917',
+        getPlugin() {
+          return (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.AdMob) || null;
+        },
+        async init() {
+          const AdMob = this.getPlugin();
+          if (AdMob && !this.initialized) {
+            try {
+              await AdMob.initialize({ initializeForTesting: true });
+              this.initialized = true;
+            } catch (err) {
+              console.error('AdMob init error:', err);
+            }
+          }
+        },
+        async showRewarded(rewardLabel, onReward) {
+          if (this.busy) return;
+          this.busy = true;
+
+          const AdMob = this.getPlugin();
+          if (AdMob) {
+            try {
+              await this.init();
+              await AdMob.prepareRewardVideoAd({ adId: this.rewardedId, isTesting: true });
+              await AdMob.showRewardVideoAd();
+              this.busy = false;
+              if (typeof onReward === 'function') onReward();
+              return;
+            } catch (err) {
+              console.error('AdMob error:', err);
+              this.busy = false;
+              showToast('Ad unavailable — try again shortly');
+              return;
+            }
+          }
+
+          adRewardTextEl.textContent = 'Reward: ' + rewardLabel;
+          adProgressBarEl.style.width = '0%';
+          adCountdownEl.textContent = 'Reward in 2.0s';
+          overlayAd.classList.add('open');
+
+          const duration = 2000;
+          const start = performance.now();
+          const step = (now) => {
+            const elapsed = now - start;
+            const pct = Math.min(1, elapsed / duration);
+            const left = Math.max(0, (duration - elapsed) / 1000);
+            adProgressBarEl.style.width = (pct * 100).toFixed(1) + '%';
+            adCountdownEl.textContent = pct < 1 ? 'Reward in ' + left.toFixed(1) + 's' : 'Reward Unlocked!';
+            if (pct < 1) {
+              requestAnimationFrame(step);
+            } else {
+              setTimeout(() => {
+                overlayAd.classList.remove('open');
+                this.busy = false;
+                if (typeof onReward === 'function') onReward();
+              }, 160);
+            }
+          };
+          requestAnimationFrame(step);
+        }
+      };
+
+      /* 6. DOM REFERENCES & TOAST */
+      const shell = document.getElementById('game-shell');
+      const canvas = document.getElementById('game-canvas');
+      const ctx = canvas.getContext('2d');
+
+      const hudShardsEl = document.getElementById('hud-shards');
+      const hudWavePillEl = document.getElementById('hud-wave-pill');
+      const hudWaveEl = document.getElementById('hud-wave');
+      const hudScoreCenterEl = document.getElementById('hud-score-center');
+      const hudScoreEl = document.getElementById('hud-score');
+      const hudComboEl = document.getElementById('hud-combo');
+
+      const btnSound = document.getElementById('btn-sound');
+      const btnHaptics = document.getElementById('btn-haptics');
+      const btnPause = document.getElementById('btn-pause');
+
+      const hudBottomEl = document.getElementById('hud-bottom');
+      const pipEls = [
+        document.getElementById('pip-1'),
+        document.getElementById('pip-2'),
+        document.getElementById('pip-3')
+      ];
+      const btnNovaMeter = document.getElementById('btn-nova-meter');
+      const novaLabelEl = document.getElementById('nova-label');
+      const novaPctEl = document.getElementById('nova-pct');
+      const novaFillEl = document.getElementById('nova-fill');
+
+      const overlayTitle = document.getElementById('overlay-title');
+      const titleBestScoreEl = document.getElementById('title-best-score');
+      const titleBestWaveEl = document.getElementById('title-best-wave');
+      const btnStart = document.getElementById('btn-start');
+      const btnTitleHangar = document.getElementById('btn-title-hangar');
+
+      const overlayPause = document.getElementById('overlay-pause');
+      const btnResume = document.getElementById('btn-resume');
+      const btnRestartPause = document.getElementById('btn-restart-pause');
+      const btnQuitPause = document.getElementById('btn-quit-pause');
+
+      const overlayGameOver = document.getElementById('overlay-gameover');
+      const goNewBestEl = document.getElementById('go-new-best');
+      const goScoreEl = document.getElementById('go-score');
+      const goBestEl = document.getElementById('go-best');
+      const goWaveEl = document.getElementById('go-wave');
+      const goShardsEl = document.getElementById('go-shards');
+      const btnRevive = document.getElementById('btn-revive');
+      const btnDoubleShards = document.getElementById('btn-double-shards');
+      const btnPlayAgain = document.getElementById('btn-play-again');
+      const btnGoHangar = document.getElementById('btn-go-hangar');
+      const btnGoHome = document.getElementById('btn-go-home');
+
+      const overlayHangar = document.getElementById('overlay-hangar');
+      const hangarShardsEl = document.getElementById('hangar-shards');
+      const skinsListEl = document.getElementById('skins-list');
+      const btnAdShards = document.getElementById('btn-ad-shards');
+      const btnCloseHangar = document.getElementById('btn-close-hangar');
+
+      const toastEl = document.getElementById('toast');
+      let toastTimer = null;
+      function showToast(msg) {
+        toastEl.textContent = msg;
+        toastEl.classList.add('show');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => toastEl.classList.remove('show'), 2200);
+      }
+
+      /* 7. CANVAS DIMENSIONS & ARENA GEOMETRY */
+      let W = 390;
+      let H = 760;
+      let dpr = 1;
+      let cx = 195;
+      let cy = 380;
+      let coreRadius = 24;
+      let shieldRadius = 68;
+      let spawnRadius = 420;
+      const SHIELD_ARC = Math.PI * 0.44;
+
+      const ambientStars = [];
+      function initAmbientStars() {
+        ambientStars.length = 0;
+        for (let i = 0; i < 65; i++) {
+          ambientStars.push({
+            nx: Math.random(),
+            ny: Math.random(),
+            r: 0.7 + Math.random() * 1.6,
+            alpha: 0.18 + Math.random() * 0.55,
+            phase: Math.random() * Math.PI * 2,
+            speed: 1.1 + Math.random() * 2.2
+          });
+        }
+      }
+
+      function resizeCanvas() {
+        const rect = shell.getBoundingClientRect();
+        W = Math.max(300, Math.round(rect.width));
+        H = Math.max(500, Math.round(rect.height));
+        dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+        canvas.width = Math.round(W * dpr);
+        canvas.height = Math.round(H * dpr);
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+        cx = W * 0.5;
+        cy = H * 0.49;
+        const minDim = Math.min(W, H);
+        coreRadius = Math.round(minDim * 0.062);
+        shieldRadius = Math.round(minDim * 0.175);
+        spawnRadius = Math.hypot(W * 0.5, H * 0.5) + 34;
+      }
+
+      /* 8. GAME STATE & WAVES */
+      let gameState = 'title';
+      let hangarReturnScreen = 'title';
+
+      let score = 0;
+      let wave = 1;
+      let combo = 1;
+      let runShards = 0;
+      let coreHP = 3;
+      let novaCharge = 0;
+      let reviveUsed = false;
+      let doubleShardsUsed = false;
+
+      let shieldAngle = -Math.PI * 0.5;
+      let shieldAngVel = 0;
+
+      let worldTime = 0;
+      let hitstopTimer = 0;
+      let shakeTime = 0;
+      let shakeStrength = 0;
+      let parryFlashAlpha = 0;
+      let damageFlashAlpha = 0;
+
+      let waveRemainingToSpawn = 0;
+      let spawnCooldown = 0;
+
+      let projectiles = [];
+      let particles = [];
+      let shockwaves = [];
+      let floatTexts = [];
+
+      function normalizeAngle(a) {
+        while (a > Math.PI) a -= Math.PI * 2;
+        while (a < -Math.PI) a += Math.PI * 2;
+        return a;
+      }
+
+      function angleDiff(a, b) {
+        return Math.abs(normalizeAngle(a - b));
+      }
+
+      function startWave(waveNum, announce) {
+        wave = waveNum;
+        if (wave > profile.bestWave) {
+          profile.bestWave = wave;
+          saveProfile();
+        }
+        waveRemainingToSpawn = 7 + wave * 3;
+        spawnCooldown = 0.55;
+        if (announce) {
+          SoundEngine.playWaveClear();
+          const skin = getEquippedSkin();
+          spawnFloatText(cx, cy - shieldRadius - 46, `WAVE ${wave}`, skin.primary, 22);
+        }
+        updateHUD();
+      }
+
+      function resetRun() {
+        score = 0;
+        wave = 1;
+        combo = 1;
+        runShards = 0;
+        coreHP = 3;
+        novaCharge = 0;
+        reviveUsed = false;
+        doubleShardsUsed = false;
+
+        shieldAngle = -Math.PI * 0.5;
+        shieldAngVel = 0;
+        hitstopTimer = 0;
+        shakeTime = 0;
+        parryFlashAlpha = 0;
+        damageFlashAlpha = 0;
+
+        projectiles = [];
+        particles = [];
+        shockwaves = [];
+        floatTexts = [];
+
+        startWave(1, false);
+        updateHUD();
+      }
+
+      /* 9. PROJECTILE SPAWNING */
+      function spawnProjectile(opts) {
+        const angleFromCenter = opts.angle !== undefined ? opts.angle : Math.random() * Math.PI * 2;
+        const dist = opts.dist !== undefined ? opts.dist : spawnRadius;
+        const x = cx + Math.cos(angleFromCenter) * dist;
+        const y = cy + Math.sin(angleFromCenter) * dist;
+
+        const baseSpeed = Math.min(390, 155 + wave * 15);
+        const type = opts.type || 'dart';
+        const skin = getDynamicShieldColors();
+
+        let speed = baseSpeed;
+        let radius = 7.5;
+        let color = skin.primary;
+        let glow = skin.glow;
+        let curveSign = 0;
+
+        if (type === 'splitter') {
+          speed = baseSpeed * 0.78;
+          radius = 11.5;
+          color = '#f59e0b';
+          glow = 'rgba(245, 158, 11, 0.65)';
+        } else if (type === 'shard') {
+          speed = baseSpeed * 1.18;
+          radius = 6;
+          color = '#fde047';
+          glow = 'rgba(253, 224, 71, 0.7)';
+        } else if (type === 'phase') {
+          speed = baseSpeed * 0.92;
+          radius = 8.5;
+          color = '#e879f9';
+          glow = 'rgba(232, 121, 249, 0.7)';
+          curveSign = opts.curveSign || (Math.random() < 0.5 ? 1 : -1);
+        }
+
+        const toCenter = Math.atan2(cy - y, cx - x);
+        projectiles.push({
+          type, x, y,
+          vx: Math.cos(toCenter) * speed,
+          vy: Math.sin(toCenter) * speed,
+          speed, radius, color, glow, curveSign,
+          age: 0,
+          trail: []
+        });
+      }
+
+      function spawnWavePattern() {
+        if (waveRemainingToSpawn <= 0) return;
+
+        if (wave >= 3 && waveRemainingToSpawn >= 2 && Math.random() < 0.24) {
+          const baseAng = Math.random() * Math.PI * 2;
+          const spread = (Math.PI * 0.55) + Math.random() * 0.5;
+          spawnProjectile({ type: 'dart', angle: baseAng });
+          spawnProjectile({ type: 'dart', angle: baseAng + spread });
+          waveRemainingToSpawn -= 2;
+          return;
+        }
+
+        const roll = Math.random();
+        if (wave >= 4 && roll < 0.24) {
+          spawnProjectile({ type: 'phase' });
+        } else if (wave >= 2 && roll < 0.48) {
+          spawnProjectile({ type: 'splitter' });
+        } else {
+          spawnProjectile({ type: 'dart' });
+        }
+        waveRemainingToSpawn--;
+      }
+
+      /* 10. FX HELPERS */
+      function spawnParticles(x, y, color, count, minSpd, maxSpd) {
+        for (let i = 0; i < count; i++) {
+          const a = Math.random() * Math.PI * 2;
+          const spd = minSpd + Math.random() * (maxSpd - minSpd);
+          particles.push({
+            x, y,
+            vx: Math.cos(a) * spd,
+            vy: Math.sin(a) * spd,
+            r: 2 + Math.random() * 3.2,
+            life: 0.36 + Math.random() * 0.34,
+            maxLife: 0.7,
+            color
+          });
+        }
+      }
+
+      function spawnShockwave(x, y, rStart, rEnd, color, lineWidth) {
+        shockwaves.push({ x, y, r: rStart, rEnd, life: 0.48, maxLife: 0.48, color, lineWidth: lineWidth || 4 });
+      }
+
+      function spawnFloatText(x, y, text, color, size) {
+        floatTexts.push({ x, y, vy: -48, text, color: color || '#ffffff', size: size || 16, life: 0.88, maxLife: 0.88 });
+      }
+
+      function triggerShake(strength, duration) {
+        shakeStrength = strength;
+        shakeTime = duration;
+      }
+
+      /* 11. COMBAT ACTIONS */
+      function handleDeflection(proj, index) {
+        const skin = getDynamicShieldColors();
+        const isParry = Math.abs(shieldAngVel) >= 2.35;
+
+        if (isParry) {
+          combo += 2;
+          const pts = 20 * combo;
+          score += pts;
+          runShards += 2;
+          profile.totalShards += 2;
+          novaCharge = Math.min(100, novaCharge + 18);
+
+          hitstopTimer = 0.042;
+          parryFlashAlpha = 0.32;
+          triggerShake(6, 0.16);
+          SoundEngine.playDeflect(combo, true);
+          Haptics.parry();
+
+          spawnShockwave(proj.x, proj.y, 6, 62, '#fde047', 3.5);
+          spawnParticles(proj.x, proj.y, '#ffffff', 16, 70, 240);
+          spawnParticles(proj.x, proj.y, '#fbbf24', 12, 60, 200);
+          spawnFloatText(proj.x, proj.y - 16, `PARRY! +${pts}`, '#fde047', 18);
+          spawnFloatText(proj.x, proj.y - 34, '+2 ✦', skin.primary, 13);
+        } else {
+          combo += 1;
+          const pts = 10 * combo;
+          score += pts;
+          runShards += 1;
+          profile.totalShards += 1;
+          novaCharge = Math.min(100, novaCharge + 10);
+
+          SoundEngine.playDeflect(combo, false);
+          Haptics.deflect();
+          spawnShockwave(proj.x, proj.y, 4, 36, skin.primary, 2.5);
+          spawnParticles(proj.x, proj.y, proj.color, 12, 50, 175);
+          spawnFloatText(proj.x, proj.y - 14, `+${pts}`, '#ffffff', 15);
+        }
+
+        if (proj.type === 'splitter') {
+          SoundEngine.playSplitterCrack();
+          const impactAngle = Math.atan2(proj.y - cy, proj.x - cx);
+          const bounceDist = shieldRadius + 68;
+          [-0.42, 0.42].forEach((offset) => {
+            spawnProjectile({ type: 'shard', angle: impactAngle + offset, dist: bounceDist });
+          });
+          spawnFloatText(proj.x, proj.y + 14, 'SPLIT!', '#fb923c', 13);
+        }
+
+        if (score > profile.highScore) profile.highScore = score;
+        saveProfile();
+        projectiles.splice(index, 1);
+        updateHUD(true);
+      }
+
+      function triggerNovaPulse() {
+        if (gameState !== 'playing' || novaCharge < 100) return;
+
+        novaCharge = 0;
+        SoundEngine.playNovaBoom();
+        Haptics.nova();
+        triggerShake(11, 0.32);
+        parryFlashAlpha = 0.28;
+
+        const skin = getDynamicShieldColors();
+        spawnShockwave(cx, cy, coreRadius, spawnRadius, '#fde047', 6);
+        spawnShockwave(cx, cy, coreRadius, spawnRadius * 0.85, skin.primary, 4);
+        spawnParticles(cx, cy, '#fde047', 32, 90, 340);
+
+        let clearedCount = 0;
+        for (let i = projectiles.length - 1; i >= 0; i--) {
+          const p = projectiles[i];
+          spawnParticles(p.x, p.y, p.color, 10, 40, 170);
+          clearedCount++;
+        }
+        projectiles = [];
+
+        const bonus = (clearedCount * 35 + 100) * Math.max(1, Math.floor(combo * 0.5));
+        const bonusShards = 5 + clearedCount * 2;
+        score += bonus;
+        runShards += bonusShards;
+        profile.totalShards += bonusShards;
+        if (score > profile.highScore) profile.highScore = score;
+        saveProfile();
+
+        spawnFloatText(cx, cy - shieldRadius - 24, `HALO NOVA! +${bonus}`, '#fde047', 21);
+        spawnFloatText(cx, cy - shieldRadius - 46, `+${bonusShards} ✦`, skin.primary, 15);
+        updateHUD(true);
+      }
+
+      function handleCoreHit(proj, index) {
+        projectiles.splice(index, 1);
+        coreHP = Math.max(0, coreHP - 1);
+        combo = 1;
+        damageFlashAlpha = 0.45;
+        triggerShake(13, 0.35);
+        SoundEngine.playCoreDamage();
+        Haptics.damage();
+
+        spawnShockwave(cx, cy, coreRadius * 0.6, shieldRadius * 1.4, '#f43f5e', 5);
+        spawnParticles(proj.x, proj.y, '#f43f5e', 24, 60, 260);
+        spawnFloatText(cx, cy - coreRadius - 18, 'HALO HIT!', '#fb7185', 18);
+        updateHUD(false);
+
+        if (coreHP <= 0) endGame();
+      }
+
+      function endGame() {
+        gameState = 'gameover';
+        const isNewBest = score >= profile.highScore && score > 0;
+        saveProfile();
+
+        hudBottomEl.style.opacity = '0';
+        btnPause.style.display = 'none';
+
+        setTimeout(() => {
+          if (gameState !== 'gameover') return;
+          goNewBestEl.classList.toggle('show', isNewBest);
+          goScoreEl.textContent = score;
+          goBestEl.textContent = profile.highScore;
+          goWaveEl.textContent = wave;
+          goShardsEl.textContent = '+' + runShards;
+
+          btnRevive.style.display = (!reviveUsed && score > 0) ? 'inline-flex' : 'none';
+          btnDoubleShards.style.display = (!doubleShardsUsed && runShards > 0) ? 'inline-flex' : 'none';
+          btnDoubleShards.textContent = `🎬 2X SHARDS (+${runShards} ✦)`;
+
+          overlayGameOver.classList.add('open');
+        }, 360);
+      }
+
+      function reviveCore() {
+        reviveUsed = true;
+        coreHP = 3;
+        projectiles = [];
+        novaCharge = Math.min(100, novaCharge + 50);
+        overlayGameOver.classList.remove('open');
+
+        gameState = 'playing';
+        hudBottomEl.style.opacity = '1';
+        btnPause.style.display = 'inline-flex';
+        updateHUD(false);
+
+        spawnShockwave(cx, cy, coreRadius, spawnRadius, '#34d399', 5);
+        spawnFloatText(cx, cy - shieldRadius - 22, 'HALO RESTORED!', '#34d399', 20);
+        SoundEngine.playWaveClear();
+        Haptics.nova();
+      }
+
+      /* 12. UPDATE & RENDER LOOP */
+      function update(dt) {
+        worldTime += dt;
+
+        if (gameState === 'playing') {
+          let keyDir = 0;
+          if (keysDown.ArrowLeft || keysDown.KeyA) keyDir -= 1;
+          if (keysDown.ArrowRight || keysDown.KeyD) keyDir += 1;
+          if (keyDir !== 0) {
+            const rotSpeed = 5.4;
+            shieldAngle = normalizeAngle(shieldAngle + keyDir * rotSpeed * dt);
+            shieldAngVel = keyDir * rotSpeed;
+          } else if (!pointerDragging) {
+            shieldAngVel *= Math.pow(0.05, dt);
+          }
+        } else if (gameState === 'title') {
+          shieldAngle = normalizeAngle(shieldAngle + 1.15 * dt);
+        }
+
+        if (parryFlashAlpha > 0) parryFlashAlpha = Math.max(0, parryFlashAlpha - dt * 1.8);
+        if (damageFlashAlpha > 0) damageFlashAlpha = Math.max(0, damageFlashAlpha - dt * 1.6);
+        if (shakeTime > 0) shakeTime = Math.max(0, shakeTime - dt);
+
+        if (hitstopTimer > 0) {
+          hitstopTimer = Math.max(0, hitstopTimer - dt);
+          return;
+        }
+
+        if (gameState === 'playing') {
+          if (waveRemainingToSpawn > 0) {
+            spawnCooldown -= dt;
+            if (spawnCooldown <= 0) {
+              spawnWavePattern();
+              spawnCooldown = Math.max(0.42, 1.25 - wave * 0.065);
+            }
+          } else if (projectiles.length === 0) {
+            score += wave * 50;
+            if (score > profile.highScore) profile.highScore = score;
+            saveProfile();
+            startWave(wave + 1, true);
+          }
+
+          for (let i = projectiles.length - 1; i >= 0; i--) {
+            const p = projectiles[i];
+            p.age += dt;
+
+            if (p.type === 'phase') {
+              const toCore = Math.atan2(cy - p.y, cx - p.x);
+              const swirl = p.curveSign * 0.42 * Math.sin(p.age * 3.8);
+              const moveAngle = toCore + swirl;
+              p.vx = Math.cos(moveAngle) * p.speed;
+              p.vy = Math.sin(moveAngle) * p.speed;
+            }
+
+            const prevDist = Math.hypot(p.x - cx, p.y - cy);
+            p.x += p.vx * dt;
+            p.y += p.vy * dt;
+            const currDist = Math.hypot(p.x - cx, p.y - cy);
+
+            p.trail.unshift({ x: p.x, y: p.y });
+            if (p.trail.length > 10) p.trail.pop();
+
+            const hitOuter = shieldRadius + p.radius + 5;
+            const hitInner = shieldRadius - p.radius - 6;
+            if (currDist <= hitOuter && prevDist >= hitInner) {
+              const projAngle = Math.atan2(p.y - cy, p.x - cx);
+              if (angleDiff(projAngle, shieldAngle) <= SHIELD_ARC * 0.5 + 0.09) {
+                handleDeflection(p, i);
+                continue;
+              }
+            }
+
+            if (currDist <= coreRadius + p.radius * 0.7) {
+              handleCoreHit(p, i);
+              if (gameState !== 'playing') return;
+            }
+          }
+        }
+
+        for (let i = particles.length - 1; i >= 0; i--) {
+          const pt = particles[i];
+          pt.x += pt.vx * dt;
+          pt.y += pt.vy * dt;
+          pt.vx *= 0.94;
+          pt.vy *= 0.94;
+          pt.life -= dt;
+          if (pt.life <= 0) particles.splice(i, 1);
+        }
+
+        for (let i = shockwaves.length - 1; i >= 0; i--) {
+          const sw = shockwaves[i];
+          sw.life -= dt;
+          if (sw.life <= 0) shockwaves.splice(i, 1);
+        }
+
+        for (let i = floatTexts.length - 1; i >= 0; i--) {
+          const ft = floatTexts[i];
+          ft.y += ft.vy * dt;
+          ft.life -= dt;
+          if (ft.life <= 0) floatTexts.splice(i, 1);
+        }
+      }
+
+      function getDynamicShieldColors() {
+        const skin = getEquippedSkin();
+        if (skin.prism) {
+          const hue = (worldTime * 140) % 360;
+          return {
+            primary: `hsl(${hue}, 95%, 65%)`,
+            secondary: `hsl(${(hue + 65) % 360}, 90%, 55%)`,
+            core: `hsl(${(hue + 30) % 360}, 95%, 72%)`,
+            glow: `hsla(${hue}, 95%, 62%, 0.6)`
+          };
+        }
+        return skin;
+      }
+
+      function render() {
+        ctx.clearRect(0, 0, W, H);
+        const skin = getDynamicShieldColors();
+
+        for (let i = 0; i < ambientStars.length; i++) {
+          const s = ambientStars[i];
+          const tw = 0.55 + 0.45 * Math.sin(worldTime * s.speed + s.phase);
+          ctx.globalAlpha = s.alpha * tw;
+          ctx.fillStyle = skin.core;
+          ctx.beginPath();
+          ctx.arc(s.nx * W, s.ny * H, s.r, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+
+        ctx.save();
+        if (shakeTime > 0) {
+          const dx = (Math.random() - 0.5) * shakeStrength * 2;
+          const dy = (Math.random() - 0.5) * shakeStrength * 2;
+          ctx.translate(dx, dy);
+        }
+
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+        ctx.lineWidth = 1;
+        [shieldRadius, shieldRadius * 1.85, shieldRadius * 2.75].forEach((r) => {
+          ctx.beginPath();
+          ctx.arc(cx, cy, r, 0, Math.PI * 2);
+          ctx.stroke();
+        });
+
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.14)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(cx, cy, shieldRadius, 0, Math.PI * 2);
+        ctx.stroke();
+
+        for (let i = 0; i < shockwaves.length; i++) {
+          const sw = shockwaves[i];
+          const t = 1 - sw.life / sw.maxLife;
+          const r = sw.r + (sw.rEnd - sw.r) * t;
+          ctx.globalAlpha = Math.max(0, 1 - t);
+          ctx.strokeStyle = sw.color;
+          ctx.lineWidth = sw.lineWidth * (1 - t * 0.5);
+          ctx.beginPath();
+          ctx.arc(sw.x, sw.y, r, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+        ctx.globalAlpha = 1;
+
+        const pulse = 1 + 0.07 * Math.sin(worldTime * 4.5);
+        const coreColor = coreHP === 1 ? '#f43f5e' : skin.core;
+        const coreHalo = ctx.createRadialGradient(cx, cy, coreRadius * 0.2, cx, cy, coreRadius * 2.3 * pulse);
+        coreHalo.addColorStop(0, coreColor);
+        coreHalo.addColorStop(0.45, coreHP === 1 ? 'rgba(244, 63, 94, 0.35)' : skin.glow);
+        coreHalo.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        ctx.fillStyle = coreHalo;
+        ctx.beginPath();
+        ctx.arc(cx, cy, coreRadius * 2.3 * pulse, 0, Math.PI * 2);
+        ctx.fill();
+
+        const coreSphere = ctx.createRadialGradient(cx - 5, cy - 5, 2, cx, cy, coreRadius * pulse);
+        coreSphere.addColorStop(0, '#ffffff');
+        coreSphere.addColorStop(0.45, coreColor);
+        coreSphere.addColorStop(1, skin.secondary);
+        ctx.fillStyle = coreSphere;
+        ctx.beginPath();
+        ctx.arc(cx, cy, coreRadius * pulse, 0, Math.PI * 2);
+        ctx.fill();
+
+        const startA = shieldAngle - SHIELD_ARC * 0.5;
+        const endA = shieldAngle + SHIELD_ARC * 0.5;
+
+        ctx.save();
+        ctx.lineCap = 'round';
+        ctx.strokeStyle = skin.glow;
+        ctx.lineWidth = 16;
+        ctx.beginPath();
+        ctx.arc(cx, cy, shieldRadius, startA, endA);
+        ctx.stroke();
+
+        ctx.strokeStyle = skin.primary;
+        ctx.lineWidth = 8.5;
+        ctx.beginPath();
+        ctx.arc(cx, cy, shieldRadius, startA, endA);
+        ctx.stroke();
+
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 2.6;
+        ctx.beginPath();
+        ctx.arc(cx, cy, shieldRadius, startA + 0.04, endA - 0.04);
+        ctx.stroke();
+        ctx.restore();
+
+        for (let i = 0; i < projectiles.length; i++) {
+          const p = projectiles[i];
+
+          for (let t = 1; t < p.trail.length; t++) {
+            const ratio = 1 - t / p.trail.length;
+            ctx.globalAlpha = ratio * 0.45;
+            ctx.strokeStyle = p.color;
+            ctx.lineWidth = p.radius * ratio * 1.1;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.moveTo(p.trail[t - 1].x, p.trail[t - 1].y);
+            ctx.lineTo(p.trail[t].x, p.trail[t].y);
+            ctx.stroke();
+          }
+          ctx.globalAlpha = 1;
+
+          const heading = Math.atan2(p.vy, p.vx);
+          ctx.save();
+          ctx.translate(p.x, p.y);
+          ctx.rotate(heading);
+
+          ctx.fillStyle = p.glow;
+          ctx.beginPath();
+          ctx.arc(0, 0, p.radius * 1.85, 0, Math.PI * 2);
+          ctx.fill();
+
+          if (p.type === 'splitter') {
+            ctx.fillStyle = p.color;
+            ctx.beginPath();
+            for (let k = 0; k < 6; k++) {
+              const a = (k * Math.PI) / 3 + worldTime * 3;
+              const px = Math.cos(a) * p.radius;
+              const py = Math.sin(a) * p.radius;
+              if (k === 0) ctx.moveTo(px, py);
+              else ctx.lineTo(px, py);
+            }
+            ctx.closePath();
+            ctx.fill();
+
+            ctx.fillStyle = '#fffbeb';
+            ctx.beginPath();
+            ctx.arc(0, 0, p.radius * 0.38, 0, Math.PI * 2);
+            ctx.fill();
+          } else if (p.type === 'phase') {
+            ctx.fillStyle = p.color;
+            ctx.beginPath();
+            ctx.moveTo(p.radius * 1.35, 0);
+            ctx.lineTo(0, -p.radius * 0.9);
+            ctx.lineTo(-p.radius * 1.1, 0);
+            ctx.lineTo(0, p.radius * 0.9);
+            ctx.closePath();
+            ctx.fill();
+          } else {
+            ctx.fillStyle = p.color;
+            ctx.beginPath();
+            ctx.moveTo(p.radius * 1.4, 0);
+            ctx.lineTo(-p.radius * 0.95, -p.radius * 0.78);
+            ctx.lineTo(-p.radius * 0.5, 0);
+            ctx.lineTo(-p.radius * 0.95, p.radius * 0.78);
+            ctx.closePath();
+            ctx.fill();
+
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(p.radius * 0.2, 0, p.radius * 0.3, 0, Math.PI * 2);
+            ctx.fill();
+          }
+          ctx.restore();
+        }
+
+        for (let i = 0; i < particles.length; i++) {
+          const pt = particles[i];
+          ctx.globalAlpha = Math.max(0, pt.life / pt.maxLife);
+          ctx.fillStyle = pt.color;
+          ctx.beginPath();
+          ctx.arc(pt.x, pt.y, pt.r, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        for (let i = 0; i < floatTexts.length; i++) {
+          const ft = floatTexts[i];
+          ctx.globalAlpha = Math.max(0, ft.life / ft.maxLife);
+          ctx.font = `900 ${ft.size}px system-ui, -apple-system, sans-serif`;
+          ctx.fillStyle = ft.color;
+          ctx.shadowColor = 'rgba(0, 0, 0, 0.75)';
+          ctx.shadowBlur = 8;
+          ctx.fillText(ft.text, ft.x, ft.y);
+          ctx.shadowBlur = 0;
+        }
+        ctx.globalAlpha = 1;
+
+        ctx.restore();
+
+        if (parryFlashAlpha > 0) {
+          ctx.fillStyle = `rgba(253, 224, 71, ${parryFlashAlpha})`;
+          ctx.fillRect(0, 0, W, H);
+        }
+        if (damageFlashAlpha > 0) {
+          ctx.fillStyle = `rgba(244, 63, 94, ${damageFlashAlpha})`;
+          ctx.fillRect(0, 0, W, H);
+        }
+      }
+
+      /* 13. HUD & ARMORY UI UPDATES */
+      function updateHUD(bumpScore) {
+        hudShardsEl.textContent = profile.totalShards;
+        hangarShardsEl.textContent = profile.totalShards;
+        titleBestScoreEl.textContent = profile.highScore;
+        titleBestWaveEl.textContent = profile.bestWave;
+
+        hudWaveEl.textContent = wave;
+        hudScoreEl.textContent = score;
+        if (bumpScore) {
+          hudScoreEl.classList.add('bump');
+          setTimeout(() => hudScoreEl.classList.remove('bump'), 120);
+        }
+
+        hudComboEl.textContent = `COMBO x${combo}`;
+        hudComboEl.classList.toggle('visible', combo >= 2 && gameState === 'playing');
+
+        for (let i = 0; i < 3; i++) {
+          pipEls[i].classList.toggle('lost', i >= coreHP);
+        }
+
+        const pct = Math.round(novaCharge);
+        novaPctEl.textContent = `${pct}%`;
+        novaFillEl.style.width = `${pct}%`;
+        const isReady = pct >= 100;
+        btnNovaMeter.classList.toggle('ready', isReady);
+        novaLabelEl.textContent = isReady ? '⚡ TAP FOR HALO NOVA!' : '⚡ Halo Nova';
+
+        btnSound.textContent = profile.soundEnabled ? '🔊' : '🔇';
+        btnSound.classList.toggle('muted', !profile.soundEnabled);
+        btnHaptics.textContent = profile.hapticsEnabled ? '📳' : '📴';
+        btnHaptics.classList.toggle('muted', !profile.hapticsEnabled);
+      }
+
+      function renderHangar() {
+        hangarShardsEl.textContent = profile.totalShards;
+        skinsListEl.innerHTML = '';
+
+        HALO_THEMES.forEach((skin) => {
+          const unlocked = profile.unlockedSkins.includes(skin.id);
+          const equipped = profile.selectedSkin === skin.id;
+
+          const card = document.createElement('div');
+          card.className = 'skin-card' + (equipped ? ' equipped' : '');
+
+          const left = document.createElement('div');
+          left.style.display = 'flex';
+          left.style.alignItems = 'center';
+          left.style.gap = '12px';
+
+          const swatch = document.createElement('div');
+          swatch.className = 'skin-swatch';
+          swatch.style.background = skin.swatch;
+
+          const info = document.createElement('div');
+          info.innerHTML = `<div style="font-size:14px;font-weight:800;">${skin.name}</div>
+                            <div style="font-size:11px;color:var(--text-muted);">${skin.desc}</div>`;
+
+          left.appendChild(swatch);
+          left.appendChild(info);
+
+          const badge = document.createElement('span');
+          if (equipped) {
+            badge.className = 'skin-badge equipped';
+            badge.textContent = 'EQUIPPED';
+          } else if (unlocked) {
+            badge.className = 'skin-badge';
+            badge.textContent = 'EQUIP';
+          } else if (skin.adUnlock) {
+            badge.className = 'skin-badge ad';
+            badge.textContent = `🎬 AD / ${skin.cost}✦`;
+          } else {
+            badge.className = 'skin-badge buy';
+            badge.textContent = `${skin.cost} ✦`;
+          }
+
+          card.appendChild(left);
+          card.appendChild(badge);
+
+          card.addEventListener('click', () => {
+            SoundEngine.init();
+            SoundEngine.playUI();
+            Haptics.tap();
+            if (equipped) return;
+
+            if (unlocked) {
+              applyTheme(skin.id);
+              renderHangar();
+              showToast(`${skin.name} theme applied!`);
+              return;
+            }
+
+            if (profile.totalShards >= skin.cost) {
+              profile.totalShards -= skin.cost;
+              profile.unlockedSkins.push(skin.id);
+              applyTheme(skin.id);
+              updateHUD(false);
+              renderHangar();
+              showToast(`Unlocked ${skin.name} theme!`);
+              return;
+            }
+
+            if (skin.adUnlock) {
+              AdManager.showRewarded(`Unlock ${skin.name} Theme`, () => {
+                if (!profile.unlockedSkins.includes(skin.id)) {
+                  profile.unlockedSkins.push(skin.id);
+                }
+                applyTheme(skin.id);
+                updateHUD(false);
+                renderHangar();
+                showToast(`✨ ${skin.name} theme unlocked!`);
+              });
+              return;
+            }
+
+            showToast(`Need ${skin.cost - profile.totalShards} more ✦ Shards`);
+          });
+
+          skinsListEl.appendChild(card);
+        });
+      }
+
+      /* 14. TOUCH-DRAG, TAP-TO-NOVA & KEYBOARD INPUTS */
+      let pointerDragging = false;
+      let pointerDownTime = 0;
+      let pointerDownX = 0;
+      let pointerDownY = 0;
+      let pointerMovedDist = 0;
+      let lastAngleUpdateTime = 0;
+      const keysDown = {};
+
+      function getPointerAngleFromCenter(clientX, clientY) {
+        const rect = canvas.getBoundingClientRect();
+        return Math.atan2((clientY - rect.top) - cy, (clientX - rect.left) - cx);
+      }
+
+      canvas.addEventListener('pointerdown', (e) => {
+        if (gameState !== 'playing') return;
+        e.preventDefault();
+        SoundEngine.init();
+
+        pointerDragging = true;
+        pointerDownTime = performance.now();
+        pointerDownX = e.clientX;
+        pointerDownY = e.clientY;
+        pointerMovedDist = 0;
+        lastAngleUpdateTime = pointerDownTime;
+
+        const targetAngle = getPointerAngleFromCenter(e.clientX, e.clientY);
+        const diff = normalizeAngle(targetAngle - shieldAngle);
+        shieldAngle = targetAngle;
+        shieldAngVel = diff * 12;
+      });
+
+      canvas.addEventListener('pointermove', (e) => {
+        if (!pointerDragging || gameState !== 'playing') return;
+        e.preventDefault();
+
+        const now = performance.now();
+        const dt = Math.max(0.004, (now - lastAngleUpdateTime) / 1000);
+        lastAngleUpdateTime = now;
+
+        pointerMovedDist += Math.hypot(e.clientX - pointerDownX, e.clientY - pointerDownY);
+        pointerDownX = e.clientX;
+        pointerDownY = e.clientY;
+
+        const newAngle = getPointerAngleFromCenter(e.clientX, e.clientY);
+        const diff = normalizeAngle(newAngle - shieldAngle);
+        shieldAngle = newAngle;
+        shieldAngVel = diff / dt;
+      });
+
+      function handlePointerRelease() {
+        if (!pointerDragging) return;
+        pointerDragging = false;
+        shieldAngVel = 0;
+
+        if (gameState !== 'playing') return;
+        const elapsed = performance.now() - pointerDownTime;
+        if (elapsed < 220 && pointerMovedDist < 14 && novaCharge >= 100) {
+          triggerNovaPulse();
+        }
+      }
+
+      canvas.addEventListener('pointerup', handlePointerRelease);
+      canvas.addEventListener('pointercancel', handlePointerRelease);
+
+      window.addEventListener('keydown', (e) => {
+        keysDown[e.code] = true;
+        if (e.code === 'Space' && gameState === 'playing') {
+          e.preventDefault();
+          triggerNovaPulse();
+        } else if (e.code === 'Escape' || e.code === 'KeyP') {
+          if (gameState === 'playing') pauseGame();
+          else if (gameState === 'paused') resumeGame();
+        }
+      });
+
+      window.addEventListener('keyup', (e) => { keysDown[e.code] = false; });
+
+      /* 15. SCREEN FLOW & BUTTONS */
+      function startGame() {
+        SoundEngine.init();
+        SoundEngine.playUI();
+        Haptics.tap();
+
+        overlayTitle.classList.remove('open');
+        overlayPause.classList.remove('open');
+        overlayGameOver.classList.remove('open');
+        overlayHangar.classList.remove('open');
+
+        hudWavePillEl.style.display = 'inline-flex';
+        hudScoreCenterEl.style.opacity = '1';
+        hudBottomEl.style.opacity = '1';
+        btnPause.style.display = 'inline-flex';
+
+        resetRun();
+        gameState = 'playing';
+      }
+
+      function pauseGame() {
+        if (gameState !== 'playing') return;
+        SoundEngine.playUI();
+        gameState = 'paused';
+        overlayPause.classList.add('open');
+      }
+
+      function resumeGame() {
+        if (gameState !== 'paused') return;
+        SoundEngine.playUI();
+        overlayPause.classList.remove('open');
+        gameState = 'playing';
+      }
+
+      function returnToTitle() {
+        SoundEngine.playUI();
+        gameState = 'title';
+        overlayPause.classList.remove('open');
+        overlayGameOver.classList.remove('open');
+        hudWavePillEl.style.display = 'none';
+        hudScoreCenterEl.style.opacity = '0';
+        hudBottomEl.style.opacity = '0';
+        btnPause.style.display = 'none';
+        projectiles = [];
+        updateHUD(false);
+        overlayTitle.classList.add('open');
+      }
+
+      function openHangar(fromScreen) {
+        hangarReturnScreen = fromScreen;
+        overlayTitle.classList.remove('open');
+        overlayGameOver.classList.remove('open');
+        renderHangar();
+        overlayHangar.classList.add('open');
+      }
+
+      function closeHangar() {
+        overlayHangar.classList.remove('open');
+        if (hangarReturnScreen === 'gameover') {
+          overlayGameOver.classList.add('open');
+        } else {
+          overlayTitle.classList.add('open');
+        }
+      }
+
+      btnStart.addEventListener('click', startGame);
+      btnPlayAgain.addEventListener('click', startGame);
+      btnRestartPause.addEventListener('click', startGame);
+      btnPause.addEventListener('click', pauseGame);
+      btnResume.addEventListener('click', resumeGame);
+      btnQuitPause.addEventListener('click', returnToTitle);
+      btnGoHome.addEventListener('click', returnToTitle);
+
+      btnNovaMeter.addEventListener('click', (e) => { e.stopPropagation(); triggerNovaPulse(); });
+      btnTitleHangar.addEventListener('click', () => { SoundEngine.playUI(); openHangar('title'); });
+      btnGoHangar.addEventListener('click', () => { SoundEngine.playUI(); openHangar('gameover'); });
+      btnCloseHangar.addEventListener('click', () => { SoundEngine.playUI(); closeHangar(); });
+
+      btnSound.addEventListener('click', () => {
+        profile.soundEnabled = !profile.soundEnabled;
+        saveProfile();
+        if (profile.soundEnabled) SoundEngine.playUI();
+        updateHUD(false);
+      });
+
+      btnHaptics.addEventListener('click', () => {
+        profile.hapticsEnabled = !profile.hapticsEnabled;
+        saveProfile();
+        if (profile.hapticsEnabled) Haptics.tap();
+        updateHUD(false);
+      });
+
+      btnRevive.addEventListener('click', () => {
+        AdManager.showRewarded('Halo Shield Repair & Revive', () => reviveCore());
+      });
+
+      btnDoubleShards.addEventListener('click', () => {
+        AdManager.showRewarded(`Double Shards (+${runShards} ✦)`, () => {
+          doubleShardsUsed = true;
+          profile.totalShards += runShards;
+          runShards *= 2;
+          saveProfile();
+          goShardsEl.textContent = '+' + runShards;
+          btnDoubleShards.style.display = 'none';
+          updateHUD(false);
+          showToast('✦ Shards doubled!');
+        });
+      });
+
+      btnAdShards.addEventListener('click', () => {
+        AdManager.showRewarded('+60 Bonus Shards', () => {
+          profile.totalShards += 60;
+          saveProfile();
+          updateHUD(false);
+          renderHangar();
+          showToast('+60 ✦ Shards added!');
+        });
+      });
+
+      window.addEventListener('resize', resizeCanvas);
+
+      /* 16. MAIN LOOP & BOOT */
+      let lastFrame = performance.now();
+      function loop(now) {
+        const dt = Math.min(0.05, (now - lastFrame) / 1000);
+        lastFrame = now;
+        if (gameState !== 'paused') update(dt);
+        render();
+        requestAnimationFrame(loop);
+      }
+
+      window.onload = function () {
+        applyTheme(profile.selectedSkin);
+        initAmbientStars();
+        resizeCanvas();
+        updateHUD(false);
+        AdManager.init();
+        lastFrame = performance.now();
+        requestAnimationFrame(loop);
+      };
+    })();
+  </script>
+</body>
+</html>
