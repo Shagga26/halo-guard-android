@@ -32,7 +32,7 @@ jobs:
 
       - name: Configure Portrait Orientation & AdMob App ID
         env:
-          ADMOB_APP_ID: ${{ secrets.ADMOB_APP_ID }}
+          ADMOB_APP_ID: "ca-app-pub-1352425380831648/6210138283"
         run: |
           node -e '
             const fs = require("fs");
