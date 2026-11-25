@@ -1,0 +1,11 @@
+{
+  "appId": "com.shagga.haloguard",
+  "appName": "Halo Guard",
+  "webDir": "www",
+  "bundledWebRuntime": false,
+  "plugins": {
+    "AdMob": {
+      "initializeForTesting": false
+    }
+  }
+}
